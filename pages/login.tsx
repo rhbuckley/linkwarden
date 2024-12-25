@@ -1,7 +1,7 @@
 import Button from "@/components/ui/Button";
 import TextInput from "@/components/TextInput";
 import CenteredForm from "@/layouts/CenteredForm";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import React, { useState, FormEvent } from "react";
 import { toast } from "react-hot-toast";
@@ -14,6 +14,7 @@ import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/api/db";
 import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";
+import { useEffect } from "react";
 
 interface FormData {
   username: string;
@@ -33,6 +34,21 @@ export default function Login({
     username: "",
     password: "",
   });
+
+  useEffect(() => {
+    // because requests are not handled within next-auth
+    // we must ensure that when the oauth flow completes
+    // and we come back to the /login page, we do not
+    // attempt to instantly signin again
+    if (
+      status === "unauthenticated" &&
+      availableLogins.buttonAuths.length === 1 &&
+      availableLogins.credentialsEnabled !== "true" &&
+      process.env.NEXT_PUBLIC_OAUTH_IMMEDIATE_REDIRECT === "true"
+    ) {
+      loginUserButton(availableLogins.buttonAuths[0].method);
+    }
+  }, []);
 
   async function loginUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
